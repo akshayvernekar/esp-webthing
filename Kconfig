@@ -1,0 +1,15 @@
+menu "Web Thing"
+
+config MAX_PROPERTY
+    int "Maximum properties per handle"
+    default 5
+    help
+        This sets the maximum number of properties that can be associated with a device.
+
+config WEB_THING_PORT
+    int "Port"
+    default 8888
+    help
+        This sets the port number for the web thing web server.
+
+endmenu
