@@ -64,7 +64,7 @@ const char* UnitsToStr[] =
 {
 	"none",
 	"celcius",
-	"FARHENITE",
+	"FARHENHEIT",
 	"PERCENT",
 	"MILLISECONDS"
 };
