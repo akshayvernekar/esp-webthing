@@ -41,7 +41,7 @@ Following properties can be created
 | eCURRENT             | NUMBER    |
 | eFREQUENCY           | NUMBER    |
 | eHEATING_COOLING     | STRING    |
-| eIMAGE               | NO_STATE  |
+| eIMAGE               | NONE      |
 | eINSTANTANEOUS_POWER | NUMBER    |
 | eLEAK                | BOOLEAN   |
 | eLEVEL               | NUMBER    |
@@ -53,7 +53,7 @@ Following properties can be created
 | eTARGET_TEMPERATURE  | NUMBER    |
 | eTEMPERATURE         | NUMBER    |
 | eTHERMOSTAT          | STRING    |
-| eVIDEO               | NO_STATE  |
+| eVIDEO               | NONE      |
 | eVOLTAGE             | NUMBER    |
 ### Add Property to Thing object
 ```c++
