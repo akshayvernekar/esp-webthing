@@ -37,7 +37,7 @@ const char* PropertyTypeInfo[][5]=
 {
 	{"Alarm","alarm",BOOLEAN,false,"AlarmProperty"},
 	{"Boolean","bool",BOOLEAN,false,"BooleanProperty"},
-	{"Brightness","brightness",NUMBER,false,"BrightnessProperty"},
+	{"Brightness","brightness",NUMBER,true,"BrightnessProperty"},
 	{"Color","color",STRING,false,"ColorProperty"},
 	{"Color Temperature","colortemp",NUMBER,false,"ColorTemperatureProperty"},
 	{"Current","current",NUMBER,false,"CurrentProperty"},
