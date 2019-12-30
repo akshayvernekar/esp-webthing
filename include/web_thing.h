@@ -83,7 +83,8 @@ typedef enum ThingPropertyType{
 
 typedef void(*PropertyChange_cb)(ThingPropertyValue);
 typedef struct ThingProperty ThingProperty;
-struct ThingProperty
+
+typedef struct PropertyInfo
 {
 	ThingPropertyType type;
 	ThingPropertyValue value;
@@ -91,10 +92,16 @@ struct ThingProperty
 	double minimum;
 	double maximum;
  	double multipleOf;
-	ThingProperty* next;
 	bool readOnly;
 	PropertyUnits unit;
-	const char** propertyEnum;
+	const char** propertyEnum;	
+}PropertyInfo;
+
+struct ThingProperty
+{
+	char* title;
+	ThingProperty* next;
+	PropertyInfo info;
 	PropertyChange_cb callback;
 };
 
@@ -129,7 +136,7 @@ Thing* createThing(const char* _title, char** _type);
 		_callback = is the callback function in the main.c which will be notified whenever controls are changed . 
 					Callback function needs to have the format void(*function_name)(ThingPropertyValue)
 */
-ThingProperty* createProperty(ThingPropertyType _type,ThingPropertyValue _defaultValue,bool _isReadOnly,PropertyUnits _units,double _min,double _max,PropertyChange_cb _callback);
+ThingProperty* createProperty(char* title,PropertyInfo info,PropertyChange_cb _callback);
 
 /* Adds property to the thing.
 
@@ -175,6 +182,7 @@ const char* get_property_keyname(ThingProperty* property);
 const char* get_property_title(ThingProperty* property);
 const char* get_property_typeschema(ThingProperty* property);
 const bool get_property_isRange(ThingProperty* property);
+const ThingPropertyValueType get_property_valueType(ThingProperty* property);
 
 /* 
 	Updates the current value of the property 
@@ -183,4 +191,6 @@ const bool get_property_isRange(ThingProperty* property);
 		newvalue = cJSON object representing the new value to be updated .
 */
 bool update_thing_property(ThingProperty* property,cJSON* newvalue);
+
+char* getPropertyEndpointUrl(Thing* device,ThingProperty* property);
 #endif

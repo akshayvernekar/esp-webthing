@@ -28,38 +28,38 @@ static const char* TAG="web_thing";
 Property Type Structure :
 {<const char* title>,<const char* property_keyname>,<ThingPropertyValueType value_type>,<bool isRange>,<const char* schema_description>}
 */
-#define PropertyTypeInfo_title 			0
-#define PropertyTypeInfo_keyname 		1
-#define PropertyTypeInfo_ValueType 		2
-#define PropertyTypeInfo_IsRange 		3
-#define PropertyTypeInfo_TypeSchema		4
+#define PropertyTypeInfo_keyname 		0
+#define PropertyTypeInfo_ValueType 		1
+#define PropertyTypeInfo_IsRange 		2
+#define PropertyTypeInfo_TypeSchema		3
 const char* PropertyTypeInfo[][5]=
 {
-	{"Alarm","alarm",BOOLEAN,false,"AlarmProperty"},
-	{"Boolean","bool",BOOLEAN,false,"BooleanProperty"},
-	{"Brightness","brightness",NUMBER,true,"BrightnessProperty"},
-	{"Color","color",STRING,false,"ColorProperty"},
-	{"Color Temperature","colortemp",NUMBER,false,"ColorTemperatureProperty"},
-	{"Current","current",NUMBER,false,"CurrentProperty"},
-	{"Frequency","freq",NUMBER,false,"FrequencyProperty"},
-	{"Heating & Cooling","heating",STRING,false,"HeatingCoolingProperty"},
-	{"Image","image",NO_STATE,false,"ImageProperty"},
-	{"Instantaneous Power","instpower",NUMBER,false,"InstantaneousPowerProperty"},
-	{"Leak","leak",BOOLEAN,false,"LeakProperty"},
-	{"Level","level",NUMBER,true,"LevelProperty"},
-	{"Locked","locked",STRING,false,"LockedProperty"},
-	{"Motion","motion",BOOLEAN,false,"MotionProperty"},
-	{"On/Off","on",BOOLEAN,false,"OnOffProperty"},
-	{"Open/Closed","open",BOOLEAN,false,"OpenProperty"},
-	{"Pushed","pushed",BOOLEAN,false,"PushedProperty"},
-	{"Target Temperature","targettemp",NUMBER,false,"TargetTemperatureProperty"},
-	{"Temperature","temp",NUMBER,false,"TemperatureProperty"},
-	{"ThermostatMode","thermostatMode",STRING,false,"ThermostatModeProperty"},
-	{"Video","video",NO_STATE,false,"VideoProperty"},
-	{"Voltage","voltage",NUMBER,false,"VoltageProperty"},
-	{"NULL","NULL",NO_STATE,true,"LAST_PROPERTY"}
+	{"alarm",BOOLEAN,false,"AlarmProperty"},
+	{"bool",BOOLEAN,false,"BooleanProperty"},
+	{"brightness",NUMBER,true,"BrightnessProperty"},
+	{"color",STRING,false,"ColorProperty"},
+	{"colortemp",NUMBER,false,"ColorTemperatureProperty"},
+	{"current",NUMBER,false,"CurrentProperty"},
+	{"freq",NUMBER,false,"FrequencyProperty"},
+	{"heating",STRING,false,"HeatingCoolingProperty"},
+	{"image",NO_STATE,false,"ImageProperty"},
+	{"instpower",NUMBER,false,"InstantaneousPowerProperty"},
+	{"leak",BOOLEAN,false,"LeakProperty"},
+	{"level",NUMBER,true,"LevelProperty"},
+	{"locked",STRING,false,"LockedProperty"},
+	{"motion",BOOLEAN,false,"MotionProperty"},
+	{"on",BOOLEAN,false,"OnOffProperty"},
+	{"open",BOOLEAN,false,"OpenProperty"},
+	{"pushed",BOOLEAN,false,"PushedProperty"},
+	{"targettemp",NUMBER,false,"TargetTemperatureProperty"},
+	{"temp",NUMBER,false,"TemperatureProperty"},
+	{"thermostatMode",STRING,false,"ThermostatModeProperty"},
+	{"video",NO_STATE,false,"VideoProperty"},
+	{"voltage",NUMBER,false,"VoltageProperty"},
+	{"NULL",NO_STATE,true,"LAST_PROPERTY"}
 };
 
+//TODO: Its not clear from the spec as to how to change the units, revisit again
 const char* UnitsToStr[] =
 {
 	"none",
@@ -73,42 +73,40 @@ Thing* createThing(const char* _title, char** _type)
 {
 	Thing* thing = malloc(sizeof(Thing));
 
-	// we will wifi mac id as ID 
+	// Mac ID will be used as device ID 
 	thing->id = malloc(sizeof(char)*13);// MAC ID is 12+1 characters long    
 	uint8_t mac[6];
     esp_wifi_get_mac(WIFI_IF_STA, mac);
     sprintf(thing->id, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-	thing->title = malloc(sizeof(char)*(strlen(_title)+1));
+	thing->title = strdup(_title);	
 	thing->type = _type;
-	strcpy(thing->title,_title);
 	thing->property = NULL;
 	return thing;
 }
 
-ThingProperty* createProperty(ThingPropertyType _type,ThingPropertyValue _defaultValue,bool _isReadOnly,PropertyUnits _units,double _min,double _max,PropertyChange_cb _callback)
+ThingProperty* createProperty(char* _title,PropertyInfo _info,PropertyChange_cb _callback)
 {
 	ThingProperty* property = malloc(sizeof(ThingProperty));
-	property->type = _type;
-	property->minimum = _min;
-	property->maximum = _max;
-	property->readOnly = _isReadOnly;
-	property->unit = _units;
-	property->next = NULL;
-	property->propertyEnum = NULL;
-	property->multipleOf = -1;
-	property->callback = _callback;
-
-	property->valueType = (ThingPropertyValueType)PropertyTypeInfo[property->type][PropertyTypeInfo_ValueType];
-	if(property->valueType == STRING)
+	if(_title)
 	{
-		property->value.string = malloc(sizeof(char)*(strlen(_defaultValue.string)+1));
-		strcpy(property->value.string,_defaultValue.string);
+		property->title = strdup(_title);
+	}
+
+	property->info = _info;
+	property->info.valueType = get_property_valueType(property);
+	if(property->info.valueType == STRING)
+	{
+		property->info.value.string = strdup(_info.value.string);
 	}
 	else
 	{
-		property->value = _defaultValue;
+		property->info.value = _info.value;
 	}
+
+	property->next = NULL;
+	property->callback = _callback;
+
 	return property;	
 }
 
@@ -129,11 +127,17 @@ void addProperty(Thing* _thing,ThingProperty* _property)
 
 void cleanUpProperty(ThingProperty** property)
 {
-	if(((ThingProperty*)*property)->valueType == STRING)
+	if(((ThingProperty*)*property)->title)
 	{
-		if(((ThingProperty*)*property)->value.string)
+		free(((ThingProperty*)*property)->title);
+		((ThingProperty*)*property)->title = NULL;
+	}
+
+	if(((ThingProperty*)*property)->info.valueType == STRING)
+	{
+		if(((ThingProperty*)*property)->info.value.string)
 		{
-			free(((ThingProperty*)*property)->value.string);
+			free(((ThingProperty*)*property)->info.value.string);
 		}
 	}
 
@@ -161,11 +165,27 @@ void cleanUpThing(Thing* thing)
 		ESP_LOGI(TAG,"No Property");
 }
 
+// TODO: create unique URLs for properties of same type
+char* getPropertyEndpointUrl(Thing* device,ThingProperty* property)
+{
+	int urlLen = strlen("/things/")+strlen(device->id)+strlen("/properties/")+strlen(get_property_keyname(property))+1; 
+	ESP_LOGI(TAG,"urlLen=%d",urlLen);
+	char* linkUrl = malloc(sizeof(char)*urlLen);
+	if(linkUrl == NULL)
+	{
+		ESP_LOGE(TAG,"ERROR:NO MEMORY");
+		return NULL;
+	}
+
+	sprintf(linkUrl,"/things/%s/properties/%s",device->id,get_property_keyname(property));
+	return linkUrl;
+}
+
 cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 {
 	//ESP_LOGI(TAG,"In serializePropertyOrEvent");
 	cJSON* prop = cJSON_CreateObject();
-	switch ((int)PropertyTypeInfo[property->type][PropertyTypeInfo_ValueType]) 
+	switch (property->info.valueType) 
 	{
 		case NO_STATE:
 		break;
@@ -187,7 +207,7 @@ cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 			return NULL;
 	}
 
-	if (property->readOnly) 
+	if (property->info.readOnly) 
 	{
 		cJSON_AddTrueToObject(prop,"readOnly");
 	}
@@ -196,34 +216,34 @@ cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 		cJSON_AddFalseToObject(prop,"readOnly");
 	}
 
-	if (property->unit != eNONE) 
+	if (property->info.unit != eNONE) 
 	{
-		cJSON_AddStringToObject(prop,"unit",UnitsToStr[property->unit]);
+		cJSON_AddStringToObject(prop,"unit",UnitsToStr[property->info.unit]);
 	}
 
-	cJSON_AddStringToObject(prop,"title",get_property_title(property));
+	cJSON_AddStringToObject(prop,"title",property->title);
 
 	if(get_property_isRange(property))
 	{
-		if (property->minimum < property->maximum) 
+		if (property->info.minimum < property->info.maximum) 
 		{
-			cJSON_AddNumberToObject(prop,"minimum",property->minimum );
-			cJSON_AddNumberToObject(prop,"maximum",property->maximum );
+			cJSON_AddNumberToObject(prop,"minimum",property->info.minimum );
+			cJSON_AddNumberToObject(prop,"maximum",property->info.maximum );
 		}
 	}
 
-	if (property->multipleOf > 0) 
+	if (property->info.multipleOf > 0) 
 	{
-		cJSON_AddNumberToObject(prop,"multipleOf",property->multipleOf );
+		cJSON_AddNumberToObject(prop,"multipleOf",property->info.multipleOf );
 	}
 
-	const char **enumVal = property->propertyEnum;
-	bool hasEnum = (property->propertyEnum != NULL) && ((*property->propertyEnum) != NULL);
+	const char **enumVal = property->info.propertyEnum;
+	bool hasEnum = (property->info.propertyEnum != NULL) && ((*property->info.propertyEnum) != NULL);
 
 	if (hasEnum) {
-		enumVal = property->propertyEnum;
+		enumVal = property->info.propertyEnum;
 		cJSON* enumJsonArray = cJSON_CreateArray();
-		while (property->propertyEnum != NULL && (*enumVal) != NULL)
+		while (property->info.propertyEnum != NULL && (*enumVal) != NULL)
 		{
 			cJSON* jsonStr = cJSON_CreateString(*enumVal);
 			cJSON_AddItemToArray(enumJsonArray,jsonStr);
@@ -233,25 +253,17 @@ cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 	}
 
 	cJSON_AddStringToObject(prop,"@type",get_property_typeschema(property));
-
-	int urlLen = strlen("/things/")+strlen(device->id)+strlen("/properties/")+strlen(get_property_keyname(property))+1;
-	char* linkUrl = malloc(sizeof(char)*urlLen);
-	if(linkUrl == NULL)
-	{
-		ESP_LOGE(TAG,"ERROR:NO MEMORY");
-	}
-
-	sprintf(linkUrl,"/things/%s/properties/%s",device->id,get_property_keyname(property));
+	char* propUri = getPropertyEndpointUrl(device,property);
 
 	cJSON* linksJsonArray = cJSON_CreateArray();
 	cJSON* href = cJSON_CreateObject();
-	cJSON_AddStringToObject(href,"href",linkUrl);
+	cJSON_AddStringToObject(href,"href",propUri);
 	cJSON_AddItemToArray(linksJsonArray,href);
 	cJSON_AddItemToObject(prop,"links",linksJsonArray);
 
-	if(linkUrl)
+	if(propUri)
 	{
-		free(linkUrl);
+		free(propUri);
 	}
 
 	return prop;
@@ -294,48 +306,53 @@ cJSON* serializeDevice(Thing* thing)
 }
 
 
-const char* get_property_title(ThingProperty* property)
-{
-	return PropertyTypeInfo[property->type][PropertyTypeInfo_title];
-}
+// const char* get_property_title(ThingProperty* property)
+// {
+// 	return PropertyTypeInfo[property->info.type][PropertyTypeInfo_title];
+// }
 
 const char* get_property_keyname(ThingProperty* property)
 {
-	return PropertyTypeInfo[property->type][PropertyTypeInfo_keyname];
+	return PropertyTypeInfo[property->info.type][PropertyTypeInfo_keyname];
 }
 
 const char* get_property_typeschema(ThingProperty* property)
 {
-	return PropertyTypeInfo[property->type][PropertyTypeInfo_TypeSchema];
+	return PropertyTypeInfo[property->info.type][PropertyTypeInfo_TypeSchema];
 }
 
 const bool get_property_isRange(ThingProperty* property)
 {
-	return PropertyTypeInfo[property->type][PropertyTypeInfo_IsRange];
+	return PropertyTypeInfo[property->info.type][PropertyTypeInfo_IsRange];
+}
+
+const ThingPropertyValueType get_property_valueType(ThingProperty* property)
+{
+	return (ThingPropertyValueType)PropertyTypeInfo[property->info.type][PropertyTypeInfo_ValueType];
 }
 
 cJSON* serialise_property_item(ThingProperty* property)
 {
 	cJSON* jsonProp = cJSON_CreateObject();
 	const char* propertyKeyName = get_property_keyname(property);
-	switch(property->valueType)
+	switch(property->info.valueType)
 	{
 		case NO_STATE:
 		break;
 
 		case BOOLEAN:
-			if(property->value.boolean)
+			if(property->info.value.boolean)
 				cJSON_AddTrueToObject(jsonProp,propertyKeyName);
 			else
 				cJSON_AddFalseToObject(jsonProp,propertyKeyName);
 		break;
 
 		case NUMBER:
-			cJSON_AddNumberToObject(jsonProp,propertyKeyName,property->value.number);
+			cJSON_AddNumberToObject(jsonProp,propertyKeyName,property->info.value.number);
 		break;
 
 		case STRING:
-			cJSON_AddStringToObject(jsonProp,propertyKeyName,property->value.string);
+			cJSON_AddStringToObject(jsonProp,propertyKeyName,property->info.value.string);
 		break;
 
 		default:
@@ -349,26 +366,28 @@ bool update_thing_property(ThingProperty* property,cJSON* newvalue)
 {
 	cJSON* valueItem = cJSON_GetObjectItem(newvalue,get_property_keyname(property));
 	char* newstr = NULL;
-	switch(property->valueType)
+	switch(property->info.valueType)
 	{
 		case BOOLEAN:
-			property->value.boolean = cJSON_IsTrue(valueItem);
+			property->info.value.boolean = cJSON_IsTrue(valueItem);
 		break;
 
 		case NUMBER:
-			property->value.number = valueItem->valueint;
+			property->info.value.number = valueItem->valueint;
 		break;
 
 		case STRING:
 			newstr = cJSON_GetStringValue(valueItem);
 			if(newstr)
 			{
-				property->value.string = (char*)realloc(property->value.string,strlen(newstr));
-				if(property->value.string != NULL)
+				if(property->info.value.string)
 				{
-					strcpy(property->value.string,newstr);
+					free(property->info.value.string);
+					property->info.value.string = NULL;
 				}
-				else
+
+				property->info.value.string = strdup(newstr);
+				if(property->info.value.string == NULL)
 				{
 					return false;
 				}
@@ -382,7 +401,7 @@ bool update_thing_property(ThingProperty* property,cJSON* newvalue)
 	
 	if(property->callback)
 	{
-		property->callback(property->value);
+		property->callback(property->info.value);
 	}
 	return true;
 }

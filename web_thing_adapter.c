@@ -196,9 +196,7 @@ void startRestAPIServer(Thing* thing)
     httpd_uri_t request_handle;
 	while (property != NULL) 
 	{
-		int urlLen = strlen("/things/")+strlen(thing->id)+strlen("/properties/")+strlen(get_property_keyname(property));
-		char* propUri = malloc(sizeof(char)*(urlLen+1));
-		sprintf(propUri,"/things/%s/properties/%s",thing->id,get_property_keyname(property));
+		char* propUri = getPropertyEndpointUrl(thing,property);
 		ESP_LOGI(REST_TAG,"url:%s",propUri);
 		request_handle.uri = propUri;
 		request_handle.method = HTTP_GET;
@@ -206,7 +204,7 @@ void startRestAPIServer(Thing* thing)
 		request_handle.user_ctx = property;
 		httpd_register_uri_handler(server, &request_handle);
 
-		if(!property->readOnly)
+		if(!property->info.readOnly)
 		{
 			request_handle.uri = propUri;
 			request_handle.method = HTTP_PUT;
@@ -215,16 +213,21 @@ void startRestAPIServer(Thing* thing)
 			httpd_register_uri_handler(server, &request_handle);	
 		}
 		
+		if(propUri)
+		{
+			free(propUri);
+			propUri = NULL;
+		}
 		property = (ThingProperty*)property->next;
 	}
 
-	sprintf(request_handle.uri,"/things/properties");
+	request_handle.uri ="/things/properties";
 	request_handle.method = HTTP_GET;
 	request_handle.handler = handleThingGetAll;
 	request_handle.user_ctx = thing;
 	httpd_register_uri_handler(server, &request_handle);
 
-	sprintf(request_handle.uri,"/things");
+	request_handle.uri="/things";
 	request_handle.method = HTTP_GET;
 	request_handle.handler = handleGetThing;
 	request_handle.user_ctx = thing;
