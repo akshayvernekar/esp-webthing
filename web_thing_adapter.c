@@ -155,9 +155,37 @@ cleanup:
     return resCode;
 }
 
-esp_err_t handleThingGetAll(httpd_req_t *req)
+esp_err_t handleThingGetAllProperties(httpd_req_t *req)
 {
-	ESP_LOGI(REST_TAG,"handleThingGetAll hit");
+	ESP_LOGI(REST_TAG,"handleThingGetAllProperties hit");
+	Thing* thing = NULL;
+	cJSON* responseJson = NULL;
+	if(req->user_ctx != NULL)
+	{
+		thing = (Thing*)req->user_ctx;
+	}
+	else
+	{
+		return ESP_FAIL;
+	}
+
+
+    ThingProperty* property = thing->property;
+    responseJson = = cJSON_CreateObject();
+	while (property != NULL) 
+	{
+		cJSON_AddItemToObject(responseJson,get_property_keyname(property),serialise_property_item(property));
+		property = (ThingProperty*)property->next;
+	}
+	const char* strRes = cJSON_Print(responseJson);
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+	httpd_resp_send(req, strRes, strlen(strRes));
+
+	//cleanup
+	free(strRes);
+	cJSON_Delete(responseJson);
+	
     return ESP_OK;
 }
 
@@ -192,6 +220,12 @@ void startRestAPIServer(Thing* thing)
 	};
 	httpd_register_uri_handler(server, &system_info_get_uri);
 
+	sprintf(&request_handle.uri,"/things/%s",gThing->id);
+	system_info_get_uri.method = HTTP_GET;
+	system_info_get_uri.handler = handleGetThing;
+	system_info_get_uri.user_ctx = thing;
+	httpd_register_uri_handler(server, &system_info_get_uri);
+
     ThingProperty* property = thing->property;
     httpd_uri_t request_handle;
 	while (property != NULL) 
@@ -221,15 +255,10 @@ void startRestAPIServer(Thing* thing)
 		property = (ThingProperty*)property->next;
 	}
 
-	request_handle.uri ="/things/properties";
+	// request_handle.uri ="/things/properties";
+	sprintf(&request_handle.uri,"/things/%s/properties",gThing->id);
 	request_handle.method = HTTP_GET;
-	request_handle.handler = handleThingGetAll;
-	request_handle.user_ctx = thing;
-	httpd_register_uri_handler(server, &request_handle);
-
-	request_handle.uri="/things";
-	request_handle.method = HTTP_GET;
-	request_handle.handler = handleGetThing;
+	request_handle.handler = handleThingGetAllProperties;
 	request_handle.user_ctx = thing;
 	httpd_register_uri_handler(server, &request_handle);
 

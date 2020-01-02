@@ -277,10 +277,43 @@ cJSON* serializeDevice(Thing* thing)
     cJSON_AddStringToObject(deviceJson,"@context","https://iot.mozilla.org/schemas");
 	// TODO: descr["base"] = ???
 
-    // cJSON* nosecSc = cJSON_CreateObject();
-    // cJSON_AddStringToObject(nosecSc,"scheme","nosec");
-    // cJSON* securityDefinitions = cJSON_CreateObject();
-    // cJSON_AddItemToObject(securityDefinitions,"securityDefinitions",nosecSc);
+    cJSON* secScheme = cJSON_CreateObject();
+    cJSON_AddStringToObject(secScheme,"scheme","nosec");
+    cJSON* noSecSc = cJSON_CreateObject();
+    cJSON_AddItemToObject(noSecSc,"nosec_sc",noSecSc);
+    cJSON_AddItemToObject(deviceJson,"securityDefinitions",noSecSc);
+
+    cJSON_AddStringToObject(deviceJson,"security","nosec_sc");
+    cJSON_AddItemToObject(noSecSc,"nosec_sc",noSecSc);
+    cJSON_AddItemToObject(deviceJson,"securityDefinitions",noSecSc);
+
+   	cJSON* linksArrayJson = cJSON_CreateArray();
+
+   	//adding properties link
+   	cJSON* propertiesLinkJson = cJSON_CreateObject();
+    cJSON_AddStringToObject(propertiesLinkJson,"rel","properties");
+
+    char* propUrl = (char*)malloc(sizeof(char)*(strlen("/things/")+strlen(thing->id)+strlen("/properties")+1));
+    if(!propUrl)
+    {
+    	ESP_LOGE(TAG,"No memory for propUrl");
+    	cJSON_Delete(deviceJson);
+    	return NULL;
+    }
+    sprintf(propUrl,"/things/%s/properties",thing->id);
+    cJSON_AddStringToObject(propertiesLinkJson,"href",propUrl);
+
+	cJSON_AddItemToArray(linksArrayJson,propertiesLinkJson);
+	cJSON_AddItemToObject(deviceJson,"links",linksArrayJson);
+
+    cJSON* noSecSc = cJSON_CreateObject();
+	while ((type != NULL)&&(*type) != NULL) 
+	{
+		cJSON* jsonStr = cJSON_CreateString(*type);
+		cJSON_AddItemToArray(typeJson,jsonStr);
+		type++;
+	}
+	cJSON_AddItemToObject(deviceJson,"@type",typeJson);
 
    	cJSON* typeJson = cJSON_CreateArray();
 	const char** type = thing->type;
