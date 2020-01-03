@@ -17,15 +17,11 @@ Thing* createThing(const char* _title, char** _type)
 
 ### Create Property
 ```c++
-ThingProperty* createProperty(ThingPropertyType _type,ThingPropertyValue _defaultValue,bool _isReadOnly,PropertyUnits _units,double _min,double _max,PropertyChange_cb _callback)
+ThingProperty* createProperty(char* _title,PropertyInfo _info,PropertyChange_cb _callback)
 ```
     Parameters:
-        _type = enum representing type of property to create , the list is based on the schemas 
-                present in https://iot.mozilla.org/schemas .
-        _defaultValue  = default value of the property
-        _isReadOnly = refers if the property is read only
-        _units = enum representing the SI unit
-        _min/_max = minimum and maximum value in range (applicable to only certain properties).
+        _title = human freindly string which describes the property.
+        _info  = PropertyInfo structure which represents the property.
         _callback = is the callback function which will be notified whenever controls are changed . 
     callback function needs to have the format `void(*function_name)(ThingPropertyValue)`
 
@@ -55,6 +51,34 @@ Following properties can be created
 | eTHERMOSTAT          | STRING    |
 | eVIDEO               | NONE      |
 | eVOLTAGE             | NUMBER    |
+
+### PropertyInfo structure
+Property Info structure is passed as a parameter for property creation .
+```c++
+struct PropertyInfo
+{
+    ThingPropertyType type;
+    ThingPropertyValue value;
+    ThingPropertyValueType valueType;
+    double minimum;
+    double maximum;
+    double multipleOf;
+    bool readOnly;
+    PropertyUnits unit;
+}
+```
+    Parameters:
+        type = enum representing the property type.
+        value = value of the property.
+        valueType = value type can be one of the four BOOLEAN,NUMBER, STRING or NONE. 
+                Refer the Property Type table for more info.
+        minimum = minimum permissible value for the property . 
+                Applicable only for properties which have Range type values such as Brightness etc.
+        maximum = maximum permissible value for the property . 
+                Applicable only for properties which have Range type values such as Brightness etc .
+        readOnly = specifies if the value of property can be changed . 
+                Set it to TRUE if you dont want the user to change the value of property for example readings of a sensor.
+        unit = SI unit of the property .
 ### Add Property to Thing object
 ```c++
 void addProperty(Thing* _thing,ThingProperty* _property)
