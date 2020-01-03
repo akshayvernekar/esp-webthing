@@ -67,7 +67,7 @@ esp_err_t handleGetThing(httpd_req_t *req)
 	if(device)
 	{
 		cJSON* responseJson = cJSON_CreateObject();
-		responseJson = serializeDevice(device,responseJson);
+		serializeDevice(device,responseJson);
 		const char* strRes = cJSON_Print(responseJson);		
 		httpd_resp_set_type(req, "application/json");
 		httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
