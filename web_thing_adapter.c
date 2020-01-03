@@ -66,7 +66,8 @@ esp_err_t handleGetThing(httpd_req_t *req)
 
 	if(device)
 	{
-		responseJson = serializeDevice(device);
+		cJSON* responseJson = cJSON_CreateObject();
+		responseJson = serializeDevice(device,responseJson);
 		const char* strRes = cJSON_Print(responseJson);		
 		httpd_resp_set_type(req, "application/json");
 		httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -89,7 +90,8 @@ esp_err_t handleThingGetItem(httpd_req_t *req)
 	}
 	if(property)
 	{
-		responseJson = serialise_property_item(property);
+		responseJson = cJSON_CreateObject();
+		serialise_property_item(property,responseJson);
 		const char* strRes = cJSON_Print(responseJson);
 		httpd_resp_set_type(req, "application/json");
 		httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -171,10 +173,10 @@ esp_err_t handleThingGetAllProperties(httpd_req_t *req)
 
 
     ThingProperty* property = thing->property;
-    responseJson = = cJSON_CreateObject();
+    responseJson = cJSON_CreateObject();
 	while (property != NULL) 
 	{
-		cJSON_AddItemToObject(responseJson,get_property_keyname(property),serialise_property_item(property));
+		serialise_property_item(property,responseJson);
 		property = (ThingProperty*)property->next;
 	}
 	const char* strRes = cJSON_Print(responseJson);
@@ -220,7 +222,8 @@ void startRestAPIServer(Thing* thing)
 	};
 	httpd_register_uri_handler(server, &system_info_get_uri);
 
-	sprintf(&request_handle.uri,"/things/%s",gThing->id);
+	char* thingDescriptionUrl = getThingDescriptionUrl(thing);
+	system_info_get_uri.uri = thingDescriptionUrl;
 	system_info_get_uri.method = HTTP_GET;
 	system_info_get_uri.handler = handleGetThing;
 	system_info_get_uri.user_ctx = thing;
@@ -256,11 +259,20 @@ void startRestAPIServer(Thing* thing)
 	}
 
 	// request_handle.uri ="/things/properties";
-	sprintf(&request_handle.uri,"/things/%s/properties",gThing->id);
+	char* thingPropertiesUrl = (char*) malloc(sizeof(char)*(strlen(thingDescriptionUrl)+strlen("/properties")+1));
+	sprintf(thingPropertiesUrl,"%s/properties",thingDescriptionUrl); 
+
+	request_handle.uri = thingPropertiesUrl;
 	request_handle.method = HTTP_GET;
 	request_handle.handler = handleThingGetAllProperties;
 	request_handle.user_ctx = thing;
 	httpd_register_uri_handler(server, &request_handle);
+
+	if(thingPropertiesUrl)
+		free(thingPropertiesUrl);
+
+	if(thingDescriptionUrl)
+		free(thingDescriptionUrl);
 
 }
 

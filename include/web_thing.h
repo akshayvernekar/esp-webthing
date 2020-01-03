@@ -165,7 +165,7 @@ void cleanUpThing(Thing* _thing);
 	Parameters:
 		_thing = pointer to the thing object 
 */
-cJSON* serializeDevice(Thing* _thing) ;
+void serializeDevice(Thing* thing,cJSON* deviceJson) ;
 
 
 /* 
@@ -175,7 +175,7 @@ cJSON* serializeDevice(Thing* _thing) ;
 	Parameters:
 		_property = pointer to the thing property object. 
 */
-cJSON* serialise_property_item(ThingProperty* property);
+void serialise_property_item(ThingProperty* property,cJSON* jsonProp);
 
 /* Helper functions to get keyname , title ,typeschema(@type)*/
 const char* get_property_keyname(ThingProperty* property);
@@ -193,4 +193,5 @@ const ThingPropertyValueType get_property_valueType(ThingProperty* property);
 bool update_thing_property(ThingProperty* property,cJSON* newvalue);
 
 char* getPropertyEndpointUrl(Thing* device,ThingProperty* property);
+char* getThingDescriptionUrl(Thing* device);
 #endif

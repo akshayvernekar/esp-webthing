@@ -181,6 +181,21 @@ char* getPropertyEndpointUrl(Thing* device,ThingProperty* property)
 	return linkUrl;
 }
 
+char* getThingDescriptionUrl(Thing* device)
+{
+	int urlLen = strlen("/things/")+strlen(device->id)+1; 
+	ESP_LOGI(TAG,"urlLen=%d",urlLen);
+	char* linkUrl = malloc(sizeof(char)*urlLen);
+	if(linkUrl == NULL)
+	{
+		ESP_LOGE(TAG,"ERROR:NO MEMORY");
+		return NULL;
+	}
+
+	sprintf(linkUrl,"/things/%s",device->id);
+	return linkUrl;
+}
+
 cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 {
 	//ESP_LOGI(TAG,"In serializePropertyOrEvent");
@@ -269,9 +284,13 @@ cJSON* serializePropertyOrEvent(Thing* device,ThingProperty* property)
 	return prop;
 } 
 
-cJSON* serializeDevice(Thing* thing) 
+void serializeDevice(Thing* thing,cJSON* deviceJson) 
 {
-	cJSON* deviceJson = cJSON_CreateObject();
+	if(!deviceJson)
+	{
+		ESP_LOGE(TAG,"No Json object passes in arg");
+		return;
+	}
     cJSON_AddStringToObject(deviceJson,"id",thing->id);
     cJSON_AddStringToObject(deviceJson,"title",thing->title);
     cJSON_AddStringToObject(deviceJson,"@context","https://iot.mozilla.org/schemas");
@@ -280,12 +299,10 @@ cJSON* serializeDevice(Thing* thing)
     cJSON* secScheme = cJSON_CreateObject();
     cJSON_AddStringToObject(secScheme,"scheme","nosec");
     cJSON* noSecSc = cJSON_CreateObject();
-    cJSON_AddItemToObject(noSecSc,"nosec_sc",noSecSc);
+    cJSON_AddItemToObject(noSecSc,"nosec_sc",secScheme);
     cJSON_AddItemToObject(deviceJson,"securityDefinitions",noSecSc);
 
     cJSON_AddStringToObject(deviceJson,"security","nosec_sc");
-    cJSON_AddItemToObject(noSecSc,"nosec_sc",noSecSc);
-    cJSON_AddItemToObject(deviceJson,"securityDefinitions",noSecSc);
 
    	cJSON* linksArrayJson = cJSON_CreateArray();
 
@@ -305,15 +322,6 @@ cJSON* serializeDevice(Thing* thing)
 
 	cJSON_AddItemToArray(linksArrayJson,propertiesLinkJson);
 	cJSON_AddItemToObject(deviceJson,"links",linksArrayJson);
-
-    cJSON* noSecSc = cJSON_CreateObject();
-	while ((type != NULL)&&(*type) != NULL) 
-	{
-		cJSON* jsonStr = cJSON_CreateString(*type);
-		cJSON_AddItemToArray(typeJson,jsonStr);
-		type++;
-	}
-	cJSON_AddItemToObject(deviceJson,"@type",typeJson);
 
    	cJSON* typeJson = cJSON_CreateArray();
 	const char** type = thing->type;
@@ -364,9 +372,14 @@ const ThingPropertyValueType get_property_valueType(ThingProperty* property)
 	return (ThingPropertyValueType)PropertyTypeInfo[property->info.type][PropertyTypeInfo_ValueType];
 }
 
-cJSON* serialise_property_item(ThingProperty* property)
+void serialise_property_item(ThingProperty* property,cJSON* jsonProp)
 {
-	cJSON* jsonProp = cJSON_CreateObject();
+	if(!jsonProp)
+	{
+		ESP_LOGE(TAG,"No Json object passes in arg");
+		return;
+	}	
+
 	const char* propertyKeyName = get_property_keyname(property);
 	switch(property->info.valueType)
 	{
@@ -390,9 +403,7 @@ cJSON* serialise_property_item(ThingProperty* property)
 
 		default:
 			ESP_LOGE(TAG,"Unknnown value");
-			return NULL;
 	}
-	return jsonProp;
 }
 
 bool update_thing_property(ThingProperty* property,cJSON* newvalue)
