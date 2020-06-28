@@ -121,4 +121,4 @@ void cleanUpThing(Thing* thing)
     Parameters:
         _thing = pointer to the thing object 
 
-## For sample implemnatation see : https://github.com/akshayvernekar/esp-webthing_examples
+### For sample implementation see : https://github.com/akshayvernekar/esp-webthing_examples
